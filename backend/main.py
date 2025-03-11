@@ -15,7 +15,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
-)
 
 # MongoDB connection
 client = MongoClient("mongodb://localhost:27017/")
@@ -54,7 +53,18 @@ async def get_flashcard(flashcard_id: str):
         raise HTTPException(status_code=404, detail="Flashcard not found")
     return {"id": str(flashcard["_id"]), "question": flashcard["question"], "answer": flashcard["answer"]}
 
-# Endpoint to delete a flashcard by id
+# Endpoint to update a flashcard by id
+@app.put("/flashcards/{flashcard_id}", response_model=FlashcardInDB)
+async def update_flashcard(flashcard_id: str, flashcard: Flashcard):
+    result = flashcards_collection.update_one(
+        {"_id": ObjectId(flashcard_id)},
+        {"$set": flashcard.dict()}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Flashcard not found")
+    updated_flashcard = flashcards_collection.find_one({"_id": ObjectId(flashcard_id)})
+    return {"id": str(updated_flashcard["_id"]), "question": updated_flashcard["question"], "answer": updated_flashcard["answer"]}
+
 @app.delete("/flashcards/{flashcard_id}")
 async def delete_flashcard(flashcard_id: str):
     result = flashcards_collection.delete_one({"_id": ObjectId(flashcard_id)})
